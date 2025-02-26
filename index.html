@@ -17,6 +17,13 @@
             border: 1px solid #ccc;
             position: relative;
         }
+        @media only screen and (max-width: 768px) {
+            canvas {
+                display: block;
+                width: 100vw;
+                height: 100vh;
+            }
+        }
         #startScreen {
             position: absolute;
             text-align: center;
@@ -66,6 +73,26 @@
         // Cat properties (randomized per game)
         const catColors = ['#ff9999', '#99ccff', '#ffcc99', '#cc99ff'];
         const catColor = catColors[Math.floor(Math.random() * catColors.length)];
+
+        //mobile handling
+        function isMobile() {
+            return /Mobi|Android/i.test(navigator.userAgent);
+        }
+        
+        function adjustCanvas() {
+            if (!isMobile()) return;
+
+            const canvas = document.querySelector('canvas');
+            canvas.style.width = '100vw';
+            canvas.style.height = '100vh';
+            canvas.style.transform = 'rotate(0deg)'; // Ensure no rotation
+        }
+        
+        if (isMobile()) {
+            window.addEventListener('resize', adjustCanvas);
+            window.addEventListener('orientationchange', adjustCanvas);
+            document.addEventListener('DOMContentLoaded', adjustCanvas);
+        }
 
         // Single AudioContext for the game
         let audioCtx;
