@@ -167,6 +167,8 @@
         const puddleImg = new Image();
         puddleImg.src = 'data:image/svg+xml,' + encodeURIComponent(puddleSvg);
 
+        const meowSound = new Audio('meow.mp3');
+
         // Audio functions
         function playSound(type) {
             if (type === 'meow') {
