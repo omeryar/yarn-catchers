@@ -83,11 +83,13 @@
             if (!isMobile()) return;
 
             const canvas = document.querySelector('canvas');
-            canvas.style.width = '100vw';
-            canvas.style.height = '100vh';
+            canvas.style.width = `${window.innerWidth}px`;
+            canvas.style.height = `${window.innerHeight}px`;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
             canvas.style.transform = 'rotate(0deg)'; // Ensure no rotation
         }
-        
+
         if (isMobile()) {
             window.addEventListener('resize', adjustCanvas);
             window.addEventListener('orientationchange', adjustCanvas);
