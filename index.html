@@ -341,10 +341,50 @@
                 }
                 return;
             }
+        });
+
+        // Add these variables to track dragging state
+        let isDraggingCat = false;
+        let touchOffsetX = 0;
+        
+        // Add touch event handlers for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            if (!game.started || game.paused) return;
+            
             const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            if (clickX < game.catX + 25) game.catX -= 20;
-            if (clickX > game.catX + 25) game.catX += 20;
+            const touchX = e.touches[0].clientX - rect.left;
+            
+            // Check if touch is on the cat
+            if (touchX >= game.catX && touchX <= game.catX + 50) {
+                isDraggingCat = true;
+                touchOffsetX = touchX - game.catX;
+                e.preventDefault(); // Prevent scrolling while dragging
+            }
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDraggingCat) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const touchX = e.touches[0].clientX - rect.left;
+            
+            // Update cat position based on touch movement
+            let newX = touchX - touchOffsetX;
+            
+            // Keep cat within canvas boundaries
+            if (newX < 0) newX = 0;
+            if (newX > canvas.width - 50) newX = canvas.width - 50;
+            
+            game.catX = newX;
+            e.preventDefault(); // Prevent scrolling while dragging
+        });
+        
+        canvas.addEventListener('touchend', (e) => {
+            isDraggingCat = false;
+        });
+        
+        canvas.addEventListener('touchcancel', (e) => {
+            isDraggingCat = false;
         });
 
         // Falling objects
