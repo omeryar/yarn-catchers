@@ -79,17 +79,47 @@
             return /Mobi|Android/i.test(navigator.userAgent);
         }
         
+        // Add a scaling factor based on screen size
+        let scaleFactor = 1;
+        
         function adjustCanvas() {
             if (!isMobile()) return;
-
+        
             const canvas = document.querySelector('canvas');
             const availableHeight = window.innerHeight;
             const availableWidth = window.innerWidth;
-            canvas.style.width = `${window.innerWidth}px`;
-            canvas.style.height = `${window.innerHeight}px`;
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            
+            canvas.style.width = `${availableWidth}px`;
+            canvas.style.height = `${availableHeight}px`;
+            canvas.width = availableWidth;
+            canvas.height = availableHeight;
+            
+            // Calculate scaling factor based on screen dimensions
+            // Use the smaller dimension to determine scale
+            const baseWidth = 400; // Original game width
+            const baseHeight = 600; // Original game height
+            
+            const widthRatio = availableWidth / baseWidth;
+            const heightRatio = availableHeight / baseHeight;
+            
+            // Use the smaller ratio to ensure everything fits on screen
+            scaleFactor = Math.min(widthRatio, heightRatio);
+            
+            // Set a minimum scale factor to ensure elements aren't too small
+            scaleFactor = Math.max(scaleFactor, 1.5);
+            
+            // Update game element sizes
+            updateGameElementSizes();
+            
             canvas.style.transform = 'rotate(0deg)'; // Ensure no rotation
+        }
+        
+        function updateGameElementSizes() {
+            // Update cat size
+            const catSize = 50 * scaleFactor;
+            
+            // Make sure to update any hardcoded sizes in the game logic
+            // For example, collision detection, drawing functions, etc.
         }
 
         if (isMobile()) {
@@ -351,37 +381,37 @@
         let isDraggingCat = false;
         let touchOffsetX = 0;
         
-        // Add a visual indicator for touch events
         canvas.addEventListener('touchstart', (e) => {
             if (!game.started || game.paused) return;
-
+        
             const rect = canvas.getBoundingClientRect();
             const touchX = e.touches[0].clientX - rect.left;
-
-            // Check if touch is on the cat
-            if (touchX >= game.catX && touchX <= game.catX + 50) {
+            const catSize = 50 * scaleFactor;
+            
+            // Check if touch is on the cat with scaled size
+            if (touchX >= game.catX && touchX <= game.catX + catSize) {
                 isDraggingCat = true;
                 touchOffsetX = touchX - game.catX;
                 e.preventDefault(); // Prevent scrolling while dragging
             }
         });
-
+        
         canvas.addEventListener('touchmove', (e) => {
             if (!isDraggingCat) return;
-
+            
             const rect = canvas.getBoundingClientRect();
             const touchX = e.touches[0].clientX - rect.left;
-
+            const catSize = 50 * scaleFactor;
+            
             // Update cat position based on touch movement
             let newX = touchX - touchOffsetX;
-
-            // Keep cat within canvas boundaries
+            
+            // Keep cat within canvas boundaries with scaled size
             if (newX < 0) newX = 0;
-            if (newX > canvas.width - 50) newX = canvas.width - 50;
-
+            if (newX > canvas.width - catSize) newX = canvas.width - catSize;
+            
             game.catX = newX;
             e.preventDefault(); // Prevent scrolling while dragging
-
         });
 
         canvas.addEventListener('touchend', (e) => {
@@ -410,18 +440,21 @@
         function update() {
             // Spawn objects
             if (Math.random() < 0.02 * game.difficulty) spawnObject();
-
+        
+            const catSize = 50 * scaleFactor;
+            const objSize = 40 * scaleFactor;
+        
             // Update falling objects
             game.fallingObjects.forEach((obj, index) => {
-                obj.y += 2 + game.difficulty * 0.5;
+                obj.y += (2 + game.difficulty * 0.5) * scaleFactor;
                 
-                // Collision detection (adjusted for larger size)
-                if (obj.y + 40 >= canvas.height - 50 && 
-                    obj.x + 40 > game.catX && 
-                    obj.x < game.catX + 50) {
+                // Collision detection with scaled sizes
+                if (obj.y + objSize >= canvas.height - catSize && 
+                    obj.x + objSize > game.catX && 
+                    obj.x < game.catX + catSize) {
                     if (!obj.isPuddle) {
                         game.score += 10;
-                        game.hearts.push({x: game.catX + 25, y: canvas.height - 70});
+                        game.hearts.push({x: game.catX + catSize/2, y: canvas.height - catSize - 20});
                         playSound('meow');
                     } else {
                         game.lives--;
@@ -435,76 +468,120 @@
                     game.fallingObjects.splice(index, 1);
                 }
             });
-
+        
             // Update hearts
             game.hearts.forEach((heart, index) => {
-                heart.y -= 2;
-                if (heart.y < canvas.height - 150) game.hearts.splice(index, 1);
+                heart.y -= 2 * scaleFactor;
+                if (heart.y < canvas.height - 150 * scaleFactor) game.hearts.splice(index, 1);
             });
-
+        
             // Boss mode
             if (game.score >= game.lastBossScore + 120 && !game.bossMode) {
                 game.bossMode = true;
+                game.difficulty += 0.5;
                 game.lastBossScore = game.score;
+                setTimeout(() => {
+                    game.bossMode = false;
+                }, 10000);
             }
-            if (game.bossMode && game.fallingObjects.filter(o => o.isPuddle).length >= 10) {
-                game.bossMode = false;
-            }
-
-            // Difficulty increase
-            game.difficulty = 1 + game.score / 500;
         }
-
+        
         // Drawing
         function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
             ctx.fillStyle = '#f6e9d7';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw cat (using preloaded SVG image)
-            if (catImage) {
-                ctx.drawImage(catImage, game.catX, canvas.height - 60, 60, 60);
-            }
-
-            // Draw falling objects (realistic yarn balls using SVG, rotated and larger)
+            
+            // Draw cat with scaled size
+            const catSize = 50 * scaleFactor;
+            ctx.drawImage(catImage, game.catX, canvas.height - catSize, catSize, catSize);
+            
+            // Draw falling objects with scaled size
+            const objSize = 40 * scaleFactor;
             game.fallingObjects.forEach(obj => {
                 if (obj.isPuddle) {
-                    ctx.save();
-                    ctx.translate(obj.x, obj.y);
-                    const scale = 0.8; // Scale down the SVG to fit game size
-                    ctx.scale(scale, scale);
-                    
-                    // Draw the puddle SVG image
-                    ctx.drawImage(puddleImg, 0, 0);
-                    
-                    ctx.restore();
+                    ctx.drawImage(puddleImg, obj.x, obj.y, objSize, objSize * 0.8);
                 } else {
-                    const yarnImg = yarnImageCache[obj.color];
-                    if (yarnImg) {
-                        ctx.save(); // Save the current context state
-                        ctx.translate(obj.x + 20, obj.y + 20); // Move to the center of the yarn ball
-                        ctx.rotate(140 * Math.PI / 180); // Rotate 140 degrees counterclockwise (negative for clockwise rotation)
-                        ctx.drawImage(yarnImg, -20, -20, 40, 40); // Draw larger (40x40) and centered
-                        ctx.restore(); // Restore the context state
-                    }
+                    ctx.drawImage(yarnImageCache[obj.color], obj.x, obj.y, objSize, objSize);
                 }
             });
-
+            
             // Draw hearts
-            ctx.fillStyle = '#ff6666';
             game.hearts.forEach(heart => {
+                const heartSize = 20 * scaleFactor;
+                ctx.fillStyle = '#ff6666';
                 ctx.beginPath();
-                ctx.moveTo(heart.x, heart.y);
-                ctx.bezierCurveTo(heart.x - 10, heart.y - 10, heart.x - 10, heart.y + 5, heart.x, heart.y + 15);
-                ctx.bezierCurveTo(heart.x + 10, heart.y + 5, heart.x + 10, heart.y - 10, heart.x, heart.y);
+                const x = heart.x;
+                const y = heart.y;
+                ctx.moveTo(x, y + heartSize / 4);
+                ctx.quadraticCurveTo(x, y, x - heartSize / 4, y);
+                ctx.quadraticCurveTo(x - heartSize / 2, y, x - heartSize / 2, y + heartSize / 4);
+                ctx.quadraticCurveTo(x - heartSize / 2, y + heartSize / 2, x, y + heartSize * 3/4);
+                ctx.quadraticCurveTo(x + heartSize / 2, y + heartSize / 2, x + heartSize / 2, y + heartSize / 4);
+                ctx.quadraticCurveTo(x + heartSize / 2, y, x + heartSize / 4, y);
+                ctx.quadraticCurveTo(x, y, x, y + heartSize / 4);
                 ctx.fill();
             });
-
-            // Draw HUD
+            
+            // Draw score and lives
+            const fontSize = 20 * Math.max(1, scaleFactor * 0.8);
+            ctx.font = `${fontSize}px Schoolbell`;
             ctx.fillStyle = '#333';
-            ctx.font = '20px Schoolbell';
-            ctx.fillText(`Score: ${game.score}`, 10, 30);
-            ctx.fillText(`Lives: ${game.lives}`, canvas.width - 100, 30);
-            if (game.bossMode) ctx.fillText('Boss Mode!', canvas.width/2 - 50, 30);
+            ctx.textAlign = 'left';
+            ctx.fillText(`Score: ${game.score}`, 10, 30 * scaleFactor);
+            
+            ctx.textAlign = 'right';
+            ctx.fillText(`Lives: ${game.lives}`, canvas.width - 10, 30 * scaleFactor);
+            
+            // Draw boss mode indicator
+            if (game.bossMode) {
+                ctx.fillStyle = 'rgba(255, 102, 102, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const warningSize = 30 * scaleFactor;
+                ctx.font = `${warningSize}px Schoolbell`;
+                ctx.fillStyle = '#ff3333';
+                ctx.textAlign = 'center';
+                ctx.fillText('PUDDLE ALERT!', canvas.width / 2, canvas.height / 2);
+            }
+            
+            // Draw pause screen
+            if (game.paused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const pauseSize = 40 * scaleFactor;
+                ctx.font = `${pauseSize}px Schoolbell`;
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = `${pauseSize/2}px Schoolbell`;
+                ctx.fillText('Press SPACE to continue', canvas.width / 2, canvas.height / 2 + pauseSize);
+            }
+            
+            // Draw game over screen
+            if (game.lives <= 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const gameOverSize = 50 * scaleFactor;
+                ctx.font = `${gameOverSize}px Schoolbell`;
+                ctx.fillStyle = '#ff6666';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - gameOverSize);
+                
+                const scoreSize = 30 * scaleFactor;
+                ctx.font = `${scoreSize}px Schoolbell`;
+                ctx.fillStyle = '#fff';
+                ctx.fillText(`Final Score: ${game.score}`, canvas.width / 2, canvas.height / 2);
+                
+                const restartSize = 20 * scaleFactor;
+                ctx.font = `${restartSize}px Schoolbell`;
+                ctx.fillText('Refresh to play again', canvas.width / 2, canvas.height / 2 + scoreSize * 2);
+            }
         }
 
         // Helper function for color manipulation
@@ -520,14 +597,6 @@
 
         // Game loop
         function gameLoop() {
-            if (game.lives <= 0) {
-                clearInterval(musicInterval);
-                ctx.fillStyle = '#333';
-                ctx.font = '40px Schoolbell';
-                ctx.fillText('Game Over!', canvas.width/2 - 100, canvas.height/2);
-                if (audioCtx) audioCtx.close(); // Clean up audio context
-                return;
-            }
             
             // Only update game state if not paused
             if (!game.paused) {
@@ -536,17 +605,6 @@
             
             // Always draw the current state
             draw();
-            
-            // Draw pause overlay if paused
-            if (game.paused) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = '30px Schoolbell';
-                ctx.fillText('PAUSED', canvas.width/2 - 60, canvas.height/2);
-                ctx.font = '16px Schoolbell';
-                ctx.fillText('Press SPACE or double tap to resume', canvas.width/2 - 130, canvas.height/2 + 40);
-            }
             
             requestAnimationFrame(gameLoop);
         }
